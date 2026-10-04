@@ -31,8 +31,8 @@ button.go{background:var(--orange);border-color:var(--orange);color:#161616;font
 <body>
 <div class="wrap">
   <h1>Twitter / X post template</h1>
-  <p class="lead">Click or drop an image onto each frame, type the game title, then download the PNG (2400 &times; 1600, 3:2).</p>
-  <canvas id="stage" width="2400" height="1600" role="img" aria-label="Post preview. Use the buttons below to add images."></canvas>
+  <p class="lead">Click or drop an image onto each frame, type the game title, then download the PNG (2400 &times; 1350, 16:9).</p>
+  <canvas id="stage" width="2400" height="1350" role="img" aria-label="Post preview. Use the buttons below to add images."></canvas>
   <div class="row">
     <button type="button" data-pick="thumb">Choose thumbnail</button>
     <button type="button" data-pick="logo">Choose logo</button>
@@ -48,8 +48,8 @@ button.go{background:var(--orange);border-color:var(--orange);color:#161616;font
   <p class="note">Images stay on your device. They are only used to draw this preview and the PNG.</p>
 </div>
 <script>
-const W=1200,H=800,S=2,OR='#e8792b';
-const R={thumb:{x:84,y:70,w:640,h:592,k:'thumb'},logo:{x:795,y:72,w:294,h:282,k:'logo'},icon:{x:803,y:392,w:278,h:262,k:'icon'}};
+const W=1200,H=675,S=2,OR='#e8792b';
+const R={thumb:{x:48,y:48,w:853,h:480,k:'thumb'},logo:{x:929,y:48,w:223,h:226,k:'logo'},icon:{x:929,y:302,w:223,h:226,k:'icon'}};
 const cv=document.getElementById('stage'),ctx=cv.getContext('2d');
 let img={thumb:null,logo:null,icon:null},hot=null;
 const rr=(x,y,w,h,r)=>{ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();};
@@ -72,21 +72,21 @@ function draw(preview){
     if(im){
       ctx.save();rr(r.x,r.y,r.w,r.h,28);ctx.clip();
       if(key==='thumb') cover(im,r.x,r.y,r.w,r.h);
-      else if(key==='logo') contain(im,r.x+24,r.y+24,r.w-48,r.h-48);
+      else if(key==='logo') contain(im,r.x+20,r.y+20,r.w-40,r.h-40);
       else {ctx.restore();ctx.save();rr(cx-64,cy-64,128,128,26);ctx.clip();cover(im,cx-64,cy-64,128,128);}
       ctx.restore();
     }else if(preview){
       ctx.fillStyle='#8f8f8f';
-      const big=key==='thumb'?27:22,t={thumb:['DROP FULL THUMBNAIL','FULL THUMBNAIL'],logo:['DROP LOGO','STANDALONE'],icon:['128px','ICON SIZE']}[key];
+      const big=key==='thumb'?27:19,t={thumb:['DROP FULL THUMBNAIL','FULL THUMBNAIL'],logo:['DROP LOGO','STANDALONE'],icon:['128px','ICON SIZE']}[key];
       ctx.font=`400 ${big}px Inter,system-ui,sans-serif`;spaced(t[0],cx,cy-4,1.5,'center');
-      ctx.font='500 15px Inter,system-ui,sans-serif';ctx.fillStyle='#7d7d7d';spaced(t[1],cx,cy+28,4,'center');
+      ctx.font='500 '+(key==='thumb'?15:12)+'px Inter,system-ui,sans-serif';ctx.fillStyle='#7d7d7d';spaced(t[1],cx,cy+(key==='thumb'?28:24),key==='thumb'?4:3,'center');
     }
     if(frames){rr(r.x,r.y,r.w,r.h,28);ctx.lineWidth=1.5;ctx.strokeStyle=OR;ctx.stroke();}
   }
-  ctx.fillStyle='#3a3a3a';ctx.fillRect(0,726,W,1);
+  ctx.fillStyle='#3a3a3a';ctx.fillRect(0,582,W,1);
   ctx.fillStyle='#8a8a8a';ctx.font='500 19px Inter,system-ui,sans-serif';
-  spaced(document.getElementById('title').value.toUpperCase(),56,770,5,'left');
-  spaced(document.getElementById('brand').value.toUpperCase(),W-56,770,5,'right');
+  spaced(document.getElementById('title').value.toUpperCase(),48,631,5,'left');
+  spaced(document.getElementById('brand').value.toUpperCase(),W-48,631,5,'right');
 }
 const redraw=()=>draw(true);
 function load(key,file){
