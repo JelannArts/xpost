@@ -19,7 +19,9 @@ h1{font-size:26px;font-weight:500;letter-spacing:-.01em}
 .row{display:flex;flex-wrap:wrap;gap:12px;margin-top:18px;align-items:end}
 label.f{display:flex;flex-direction:column;gap:6px;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--soft);flex:1 1 200px}
 input[type=text]{background:var(--panel);border:1px solid var(--line);border-radius:8px;color:var(--text);padding:11px 12px;font:inherit;font-size:15px;letter-spacing:0;text-transform:none}
-input[type=text]:focus-visible,button:focus-visible{outline:2px solid var(--orange);outline-offset:2px}
+input[type=color]{width:100%;height:42px;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:3px;cursor:pointer}
+input[type=range]{width:100%;accent-color:var(--orange);margin-top:10px}
+input:focus-visible,button:focus-visible{outline:2px solid var(--orange);outline-offset:2px}
 button{background:var(--panel);border:1px solid var(--line);border-radius:8px;color:var(--text);padding:11px 16px;font:inherit;font-size:14px;cursor:pointer;transition:border-color .2s}
 button:hover{border-color:var(--orange)}
 button.go{background:var(--orange);border-color:var(--orange);color:#161616;font-weight:600}
@@ -31,13 +33,20 @@ button.go{background:var(--orange);border-color:var(--orange);color:#161616;font
 <body>
 <div class="wrap">
   <h1>Twitter / X post template</h1>
-  <p class="lead">Click or drop an image onto each frame, type the game title, then download the PNG (2400 &times; 1350, 16:9).</p>
+  <p class="lead">Click or drop an image onto each frame (drop outside the frames to set the background), type the game title, then download the PNG (2400 &times; 1350, 16:9).</p>
   <canvas id="stage" width="2400" height="1350" role="img" aria-label="Post preview. Use the buttons below to add images."></canvas>
   <div class="row">
     <button type="button" data-pick="thumb">Choose thumbnail</button>
     <button type="button" data-pick="logo">Choose logo</button>
     <button type="button" data-pick="icon">Choose icon</button>
     <label class="chk"><input type="checkbox" id="frames" checked> Card outlines</label>
+  </div>
+  <div class="row">
+    <button type="button" data-pick="bg">Choose background</button>
+    <button type="button" id="bgclear">Remove background</button>
+    <label class="f" style="flex:0 0 130px">Background color<input type="color" id="bgcolor" value="#151515"></label>
+    <label class="f">Background opacity: <span id="opv">40%</span><input type="range" id="bgop" min="0" max="100" value="40"></label>
+    <label class="f">Background blur: <span id="blv">0px</span><input type="range" id="bgblur" min="0" max="40" value="0"></label>
   </div>
   <div class="row">
     <label class="f">Game title<input type="text" id="title" value="Game Title" maxlength="40"></label>
@@ -51,7 +60,7 @@ button.go{background:var(--orange);border-color:var(--orange);color:#161616;font
 const W=1200,H=675,S=2,OR='#e8792b';
 const R={thumb:{x:40,y:40,w:816,h:459},logo:{x:884,y:40,w:276,h:276},icon:{x:884,y:344,w:276,h:155}};
 const cv=document.getElementById('stage'),ctx=cv.getContext('2d');
-let img={thumb:null,logo:null,icon:null},hot=null;
+let img={thumb:null,logo:null,icon:null,bg:null},hot=null;
 const F='Inter,system-ui,sans-serif';
 const rr=(x,y,w,h,r)=>{ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();};
 const tw=(t,sp)=>{const ch=[...t];return ch.reduce((a,c)=>a+ctx.measureText(c).width,0)+sp*Math.max(0,ch.length-1);};
@@ -73,10 +82,28 @@ function stroke(r,rad,key,preview,outline){
   ctx.strokeStyle=(preview&&hot===key)?OR:(outline?'rgba(255,255,255,.09)':'rgba(255,255,255,0)');ctx.stroke();
 }
 function label(t,cx,y,size,sp,col){ctx.fillStyle=col;ctx.font=`500 ${size}px ${F}`;spaced(t,cx,y,sp,'center');}
+const HAS_FILTER=(()=>{try{return document.createElement('canvas').getContext('2d').filter==='none';}catch(e){return false;}})();
+function drawBg(){
+  const blur=+document.getElementById('bgblur').value,op=document.getElementById('bgop').value/100;
+  ctx.save();ctx.globalAlpha=op;
+  if(!blur){cover(img.bg,0,0,W,H);}
+  else if(HAS_FILTER){const m=blur*2;ctx.filter='blur('+(blur*S)+'px)';cover(img.bg,-m,-m,W+2*m,H+2*m);}
+  else{ /* fallback for browsers without canvas blur: shrink then stretch */
+    const k=1+blur/2,sw=Math.max(8,Math.round(W/k)),sh=Math.max(8,Math.round(H/k));
+    const a=document.createElement('canvas');a.width=sw;a.height=sh;
+    const ac=a.getContext('2d');ac.imageSmoothingQuality='high';
+    const s=Math.max(sw/img.bg.width,sh/img.bg.height),dw=img.bg.width*s,dh=img.bg.height*s;
+    ac.drawImage(img.bg,(sw-dw)/2,(sh-dh)/2,dw,dh);
+    ctx.imageSmoothingQuality='high';ctx.drawImage(a,-8,-8,W+16,H+16);
+  }
+  ctx.restore();
+}
 function draw(preview){
   ctx.setTransform(S,0,0,S,0,0);
-  const bg=ctx.createRadialGradient(W/2,H*.4,60,W/2,H*.5,W*.75);bg.addColorStop(0,'#191919');bg.addColorStop(1,'#0d0d0d');
-  ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);
+  ctx.fillStyle=document.getElementById('bgcolor').value;ctx.fillRect(0,0,W,H);
+  if(img.bg) drawBg();
+  const vg=ctx.createRadialGradient(W/2,H*.4,60,W/2,H*.5,W*.75);vg.addColorStop(0,'rgba(255,255,255,.03)');vg.addColorStop(1,'rgba(0,0,0,.4)');
+  ctx.fillStyle=vg;ctx.fillRect(0,0,W,H);
   const outline=document.getElementById('frames').checked;
   /* thumbnail */
   let r=R.thumb;card(r,22,'thumb',preview,outline);
@@ -125,9 +152,12 @@ const at=e=>{const b=cv.getBoundingClientRect(),x=(e.clientX-b.left)*W/b.width,y
 cv.addEventListener('click',e=>{const k=at(e);if(k)pick(k);});
 cv.addEventListener('dragover',e=>{e.preventDefault();const k=at(e);if(k!==hot){hot=k;redraw();}});
 cv.addEventListener('dragleave',()=>{hot=null;redraw();});
-cv.addEventListener('drop',e=>{e.preventDefault();const k=at(e);hot=null;if(k)load(k,e.dataTransfer.files[0]);else redraw();});
-['title','brand','frames'].forEach(id=>document.getElementById(id).addEventListener('input',redraw));
-document.getElementById('reset').addEventListener('click',()=>{img={thumb:null,logo:null,icon:null};document.getElementById('title').value='Game Title';document.getElementById('brand').value='Jelann Arts';redraw();});
+cv.addEventListener('drop',e=>{e.preventDefault();const k=at(e);hot=null;load(k||'bg',e.dataTransfer.files[0]);redraw();});
+['title','brand','frames','bgcolor'].forEach(id=>document.getElementById(id).addEventListener('input',redraw));
+document.getElementById('bgop').addEventListener('input',e=>{document.getElementById('opv').textContent=e.target.value+'%';redraw();});
+document.getElementById('bgblur').addEventListener('input',e=>{document.getElementById('blv').textContent=e.target.value+'px';redraw();});
+document.getElementById('bgclear').addEventListener('click',()=>{img.bg=null;redraw();});
+document.getElementById('reset').addEventListener('click',()=>{img={thumb:null,logo:null,icon:null,bg:null};document.getElementById('bgcolor').value='#151515';document.getElementById('bgop').value=40;document.getElementById('bgblur').value=0;document.getElementById('blv').textContent='0px';document.getElementById('opv').textContent='40%';document.getElementById('title').value='Game Title';document.getElementById('brand').value='Jelann Arts';redraw();});
 document.getElementById('dl').addEventListener('click',()=>{
   draw(false);
   cv.toBlob(b=>{
@@ -136,6 +166,8 @@ document.getElementById('dl').addEventListener('click',()=>{
     redraw();
   },'image/png');
 });
+window.addEventListener('dragover',e=>e.preventDefault());
+window.addEventListener('drop',e=>e.preventDefault());
 redraw();
 if(document.fonts&&document.fonts.load)Promise.all([document.fonts.load('500 20px Inter'),document.fonts.load('600 20px Inter')]).then(redraw);
 </script>
