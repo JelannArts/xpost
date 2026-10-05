@@ -46,6 +46,8 @@ button.go{background:var(--orange);border-color:var(--orange);color:#161616;font
     <button type="button" id="bgclear">Remove background</button>
     <label class="f" style="flex:0 0 130px">Background color<input type="color" id="bgcolor" value="#151515"></label>
     <label class="f">Background opacity: <span id="opv">40%</span><input type="range" id="bgop" min="0" max="100" value="40"></label>
+    <label class="f">Panel opacity: <span id="pov">0%</span><input type="range" id="panelop" min="0" max="100" value="0"></label>
+    <label class="f">Frosted glass: <span id="frv">18px</span><input type="range" id="frost" min="0" max="40" value="18"></label>
     <label class="f">Background blur: <span id="blv">0px</span><input type="range" id="bgblur" min="0" max="40" value="0"></label>
   </div>
   <div class="row">
@@ -62,7 +64,8 @@ const R={thumb:{x:40,y:40,w:816,h:459},logo:{x:884,y:40,w:276,h:276},icon:{x:884
 const cv=document.getElementById('stage'),ctx=cv.getContext('2d');
 let img={thumb:null,logo:null,icon:null,bg:null},hot=null;
 const F='Inter,system-ui,sans-serif';
-const rr=(x,y,w,h,r)=>{ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();};
+const rp=(x,y,w,h,r)=>{ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();};
+const rr=(x,y,w,h,r)=>{ctx.beginPath();rp(x,y,w,h,r);};
 const tw=(t,sp)=>{const ch=[...t];return ch.reduce((a,c)=>a+ctx.measureText(c).width,0)+sp*Math.max(0,ch.length-1);};
 function spaced(t,x,y,sp,align){
   const w=tw(t,sp);let cx=align==='center'?x-w/2:align==='right'?x-w:x;
@@ -71,10 +74,26 @@ function spaced(t,x,y,sp,align){
 function cover(im,x,y,w,h){const s=Math.max(w/im.width,h/im.height),dw=im.width*s,dh=im.height*s;ctx.drawImage(im,x+(w-dw)/2,y+(h-dh)/2,dw,dh);}
 function contain(im,x,y,w,h){const s=Math.min(w/im.width,h/im.height),dw=im.width*s,dh=im.height*s;ctx.drawImage(im,x+(w-dw)/2,y+(h-dh)/2,dw,dh);}
 function card(r,rad,key,preview,outline){
+  const pa=document.getElementById('panelop').value/100;
+  /* soft shadow drawn only outside the panel, so the inside stays see-through */
   ctx.save();
-  ctx.shadowColor='rgba(0,0,0,.45)';ctx.shadowBlur=28;ctx.shadowOffsetY=10;
-  const g=ctx.createLinearGradient(0,r.y,0,r.y+r.h);g.addColorStop(0,'#1c1c1c');g.addColorStop(1,'#141414');
-  ctx.fillStyle=g;rr(r.x,r.y,r.w,r.h,rad);ctx.fill();ctx.restore();
+  ctx.beginPath();ctx.rect(0,0,W,H);rp(r.x,r.y,r.w,r.h,rad);ctx.clip('evenodd');
+  ctx.shadowColor='rgba(0,0,0,.4)';ctx.shadowBlur=28;ctx.shadowOffsetY=10;
+  ctx.fillStyle='#000';rr(r.x,r.y,r.w,r.h,rad);ctx.fill();
+  ctx.restore();
+  const fr=+document.getElementById('frost').value;
+  if(fr>0&&img.bg){
+    ctx.save();rr(r.x,r.y,r.w,r.h,rad);ctx.clip();
+    ctx.fillStyle=document.getElementById('bgcolor').value;ctx.fillRect(r.x,r.y,r.w,r.h);
+    drawBg(fr);
+    ctx.fillStyle='rgba(255,255,255,.06)';ctx.fillRect(r.x,r.y,r.w,r.h);
+    ctx.restore();
+  }
+  if(pa>0){
+    ctx.save();ctx.globalAlpha=pa;
+    const g=ctx.createLinearGradient(0,r.y,0,r.y+r.h);g.addColorStop(0,'#1c1c1c');g.addColorStop(1,'#141414');
+    ctx.fillStyle=g;rr(r.x,r.y,r.w,r.h,rad);ctx.fill();ctx.restore();
+  }
   if(preview&&hot===key){ctx.save();ctx.fillStyle='rgba(232,121,43,.10)';rr(r.x,r.y,r.w,r.h,rad);ctx.fill();ctx.restore();}
 }
 function stroke(r,rad,key,preview,outline){
@@ -83,8 +102,8 @@ function stroke(r,rad,key,preview,outline){
 }
 function label(t,cx,y,size,sp,col){ctx.fillStyle=col;ctx.font=`500 ${size}px ${F}`;spaced(t,cx,y,sp,'center');}
 const HAS_FILTER=(()=>{try{return document.createElement('canvas').getContext('2d').filter==='none';}catch(e){return false;}})();
-function drawBg(){
-  const blur=+document.getElementById('bgblur').value,op=document.getElementById('bgop').value/100;
+function drawBg(extra){
+  const blur=(+document.getElementById('bgblur').value)+(extra||0),op=document.getElementById('bgop').value/100;
   ctx.save();ctx.globalAlpha=op;
   if(!blur){cover(img.bg,0,0,W,H);}
   else if(HAS_FILTER){const m=blur*2;ctx.filter='blur('+(blur*S)+'px)';cover(img.bg,-m,-m,W+2*m,H+2*m);}
@@ -155,9 +174,11 @@ cv.addEventListener('dragleave',()=>{hot=null;redraw();});
 cv.addEventListener('drop',e=>{e.preventDefault();const k=at(e);hot=null;load(k||'bg',e.dataTransfer.files[0]);redraw();});
 ['title','brand','frames','bgcolor'].forEach(id=>document.getElementById(id).addEventListener('input',redraw));
 document.getElementById('bgop').addEventListener('input',e=>{document.getElementById('opv').textContent=e.target.value+'%';redraw();});
+document.getElementById('panelop').addEventListener('input',e=>{document.getElementById('pov').textContent=e.target.value+'%';redraw();});
+document.getElementById('frost').addEventListener('input',e=>{document.getElementById('frv').textContent=e.target.value+'px';redraw();});
 document.getElementById('bgblur').addEventListener('input',e=>{document.getElementById('blv').textContent=e.target.value+'px';redraw();});
 document.getElementById('bgclear').addEventListener('click',()=>{img.bg=null;redraw();});
-document.getElementById('reset').addEventListener('click',()=>{img={thumb:null,logo:null,icon:null,bg:null};document.getElementById('bgcolor').value='#151515';document.getElementById('bgop').value=40;document.getElementById('bgblur').value=0;document.getElementById('blv').textContent='0px';document.getElementById('opv').textContent='40%';document.getElementById('title').value='Game Title';document.getElementById('brand').value='Jelann Arts';redraw();});
+document.getElementById('reset').addEventListener('click',()=>{img={thumb:null,logo:null,icon:null,bg:null};document.getElementById('bgcolor').value='#151515';document.getElementById('bgop').value=40;document.getElementById('panelop').value=0;document.getElementById('frost').value=18;document.getElementById('frv').textContent='18px';document.getElementById('pov').textContent='0%';document.getElementById('bgblur').value=0;document.getElementById('blv').textContent='0px';document.getElementById('opv').textContent='40%';document.getElementById('title').value='Game Title';document.getElementById('brand').value='Jelann Arts';redraw();});
 document.getElementById('dl').addEventListener('click',()=>{
   draw(false);
   cv.toBlob(b=>{
