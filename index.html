@@ -7,7 +7,7 @@
 <title>Post Template | Jelann Arts</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Lilita+One&family=Dela+Gothic+One&family=Permanent+Marker&family=Cinzel:wght@700&family=Bebas+Neue&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#0f0f0f;--panel:#171717;--line:#2c2c2c;--text:#f2f0ea;--soft:#9a9a9a;--orange:#ff8a3d;--a2:#ff4d6d}
 *{box-sizing:border-box;margin:0}
@@ -61,6 +61,7 @@ button.go{background:linear-gradient(100deg,var(--orange),var(--a2));border-colo
   </div>
   <div class="row">
     <label class="f">Game title<input type="text" id="title" value="Game Title" maxlength="40"></label>
+    <label class="f" style="flex:0 0 170px">Title font<select id="tfont"><option value="clean">Clean</option><option value="cartoony">Cartoony</option><option value="anime">Anime</option><option value="grunge">Grunge</option><option value="real">Semi-realism</option><option value="bold">Bold</option></select></label>
     <label class="f">Right label<input type="text" id="brand" value="Jelann Arts" maxlength="30"></label>
     <button type="button" id="reset">Reset</button>
     <button type="button" class="go" id="dl">Download PNG</button>
@@ -69,6 +70,7 @@ button.go{background:linear-gradient(100deg,var(--orange),var(--a2));border-colo
 </div>
 <script>
 const W=1200,H=675,S=2;
+const FONTS={clean:{f:'Inter',w:600,s:54,sp:2},cartoony:{f:'Lilita One',w:400,s:58,sp:1},anime:{f:'Dela Gothic One',w:400,s:48,sp:1},grunge:{f:'Permanent Marker',w:400,s:52,sp:1},real:{f:'Cinzel',w:700,s:48,sp:3},bold:{f:'Bebas Neue',w:400,s:68,sp:3}};
 const PRESETS={sunset:['#ff8a3d','#ff4d6d'],ember:['#e8792b','#e8792b'],electric:['#3da5ff','#7a5cff'],aurora:['#2de2b3','#3da5ff'],orchid:['#c77dff','#ff5fa2'],gold:['#f5c451','#e8923a']};
 const A=()=>[document.getElementById('ac1').value,document.getElementById('ac2').value];
 const rgba=(h,a)=>{const n=parseInt(h.slice(1),16);return `rgba(${n>>16},${(n>>8)&255},${n&255},${a})`;};
@@ -192,12 +194,16 @@ function draw(preview){
   /* title + brand */
   const title=document.getElementById('title').value.toUpperCase(),brand=document.getElementById('brand').value.toUpperCase();
   ctx.fillStyle=grad(40,583,64,4);rr(40,582,64,4,2);ctx.fill();
-  let fs=54;ctx.font=`600 ${fs}px ${F}`;
-  while(fs>26&&tw(title,2)>690){fs-=2;ctx.font=`600 ${fs}px ${F}`;}
-  ctx.fillStyle='#fff';spaced(title,118,584+fs*.36,2,'left');
+  const TF=FONTS[document.getElementById('tfont').value]||FONTS.clean,fam=`"${TF.f}",${F}`;
+  let fs=TF.s;ctx.font=`${TF.w} ${fs}px ${fam}`;
+  while(fs>26&&tw(title,TF.sp)>690){fs-=2;ctx.font=`${TF.w} ${fs}px ${fam}`;}
+  ctx.fillStyle='#fff';spaced(title,118,584+fs*.36,TF.sp,'left');
   ctx.fillStyle='#8a8a8a';ctx.font=`500 14px ${F}`;spaced(brand,W-40,590,4,'right');
 }
 const redraw=()=>draw(true);
+function useFont(){const TF=FONTS[document.getElementById('tfont').value]||FONTS.clean;redraw();
+  if(document.fonts&&document.fonts.load)document.fonts.load(`${TF.w} 40px "${TF.f}"`).then(redraw).catch(()=>{});}
+document.getElementById('tfont').addEventListener('change',useFont);
 function applyAccent(){const [c1,c2]=A();document.documentElement.style.setProperty('--orange',c1);document.documentElement.style.setProperty('--a2',c2);redraw();}
 document.getElementById('preset').addEventListener('change',e=>{const [c1,c2]=PRESETS[e.target.value];document.getElementById('ac1').value=c1;document.getElementById('ac2').value=c2;applyAccent();});
 ['ac1','ac2'].forEach(id=>document.getElementById(id).addEventListener('input',applyAccent));
@@ -228,7 +234,7 @@ document.getElementById('panelop').addEventListener('input',e=>{document.getElem
 document.getElementById('frost').addEventListener('input',e=>{document.getElementById('frv').textContent=e.target.value+'px';redraw();});
 document.getElementById('bgblur').addEventListener('input',e=>{document.getElementById('blv').textContent=e.target.value+'px';redraw();});
 document.getElementById('bgclear').addEventListener('click',()=>{img.bg=null;redraw();});
-document.getElementById('reset').addEventListener('click',()=>{img={thumb:null,logo:null,icon:null,bg:null,before:null,after:null};document.getElementById('bgcolor').value='#151515';document.getElementById('preset').value='sunset';document.getElementById('ac1').value='#ff8a3d';document.getElementById('ac2').value='#ff4d6d';applyAccent();document.getElementById('bgop').value=40;document.getElementById('panelop').value=0;document.getElementById('frost').value=18;document.getElementById('frv').textContent='18px';document.getElementById('pov').textContent='0%';document.getElementById('bgblur').value=0;document.getElementById('blv').textContent='0px';document.getElementById('opv').textContent='40%';document.getElementById('title').value='Game Title';document.getElementById('brand').value='Jelann Arts';redraw();});
+document.getElementById('reset').addEventListener('click',()=>{img={thumb:null,logo:null,icon:null,bg:null,before:null,after:null};document.getElementById('bgcolor').value='#151515';document.getElementById('preset').value='sunset';document.getElementById('tfont').value='clean';document.getElementById('ac1').value='#ff8a3d';document.getElementById('ac2').value='#ff4d6d';applyAccent();document.getElementById('bgop').value=40;document.getElementById('panelop').value=0;document.getElementById('frost').value=18;document.getElementById('frv').textContent='18px';document.getElementById('pov').textContent='0%';document.getElementById('bgblur').value=0;document.getElementById('blv').textContent='0px';document.getElementById('opv').textContent='40%';document.getElementById('title').value='Game Title';document.getElementById('brand').value='Jelann Arts';redraw();});
 document.getElementById('dl').addEventListener('click',()=>{
   draw(false);
   cv.toBlob(b=>{
