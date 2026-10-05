@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#0f0f0f;--panel:#171717;--line:#2c2c2c;--text:#f2f0ea;--soft:#9a9a9a;--orange:#e8792b}
+:root{--bg:#0f0f0f;--panel:#171717;--line:#2c2c2c;--text:#f2f0ea;--soft:#9a9a9a;--orange:#ff8a3d;--a2:#ff4d6d}
 *{box-sizing:border-box;margin:0}
 body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-serif;line-height:1.5;padding:28px 20px 60px}
 .wrap{max-width:1000px;margin:0 auto}
@@ -19,12 +19,14 @@ h1{font-size:26px;font-weight:500;letter-spacing:-.01em}
 .row{display:flex;flex-wrap:wrap;gap:12px;margin-top:18px;align-items:end}
 label.f{display:flex;flex-direction:column;gap:6px;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--soft);flex:1 1 200px}
 input[type=text]{background:var(--panel);border:1px solid var(--line);border-radius:8px;color:var(--text);padding:11px 12px;font:inherit;font-size:15px;letter-spacing:0;text-transform:none}
+select{background:var(--panel);border:1px solid var(--line);border-radius:8px;color:var(--text);padding:11px 12px;font:inherit;font-size:15px}
+[hidden]{display:none!important}
 input[type=color]{width:100%;height:42px;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:3px;cursor:pointer}
 input[type=range]{width:100%;accent-color:var(--orange);margin-top:10px}
 input:focus-visible,button:focus-visible{outline:2px solid var(--orange);outline-offset:2px}
 button{background:var(--panel);border:1px solid var(--line);border-radius:8px;color:var(--text);padding:11px 16px;font:inherit;font-size:14px;cursor:pointer;transition:border-color .2s}
 button:hover{border-color:var(--orange)}
-button.go{background:var(--orange);border-color:var(--orange);color:#161616;font-weight:600}
+button.go{background:linear-gradient(100deg,var(--orange),var(--a2));border-color:transparent;color:#161616;font-weight:700}
 .chk{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--soft);padding:11px 4px}
 .note{margin-top:14px;font-size:13px;color:var(--soft)}
 @media(prefers-reduced-motion:reduce){*{transition:none!important}}
@@ -36,10 +38,17 @@ button.go{background:var(--orange);border-color:var(--orange);color:#161616;font
   <p class="lead">Click or drop an image onto each frame (drop outside the frames to set the background), type the game title, then download the PNG (2400 &times; 1350, 16:9).</p>
   <canvas id="stage" width="2400" height="1350" role="img" aria-label="Post preview. Use the buttons below to add images."></canvas>
   <div class="row">
-    <button type="button" data-pick="thumb">Choose thumbnail</button>
-    <button type="button" data-pick="logo">Choose logo</button>
-    <button type="button" data-pick="icon">Choose icon</button>
+    <label class="f" style="flex:0 0 190px">Layout<select id="layout"><option value="showcase">Showcase</option><option value="ba">Before / After</option></select></label>
+    <button type="button" data-pick="thumb" data-for="showcase">Choose thumbnail</button>
+    <button type="button" data-pick="logo" data-for="showcase">Choose logo</button>
+    <button type="button" data-pick="icon" data-for="showcase">Choose icon</button>
+    <button type="button" data-pick="before" data-for="ba" hidden>Choose BEFORE logo</button>
+    <button type="button" data-pick="after" data-for="ba" hidden>Choose AFTER logo</button>
+    <label class="chk" data-for="ba" hidden><input type="checkbox" id="mute"> Mute BEFORE (greyscale)</label>
     <label class="chk"><input type="checkbox" id="frames" checked> Card outlines</label>
+    <label class="f" style="flex:0 0 170px">Accent style<select id="preset"><option value="sunset">Sunset</option><option value="ember">Ember</option><option value="electric">Electric</option><option value="aurora">Aurora</option><option value="orchid">Orchid</option><option value="gold">Gold</option></select></label>
+    <label class="f" style="flex:0 0 90px">Accent 1<input type="color" id="ac1" value="#ff8a3d"></label>
+    <label class="f" style="flex:0 0 90px">Accent 2<input type="color" id="ac2" value="#ff4d6d"></label>
   </div>
   <div class="row">
     <button type="button" data-pick="bg">Choose background</button>
@@ -59,10 +68,16 @@ button.go{background:var(--orange);border-color:var(--orange);color:#161616;font
   <p class="note">Images stay on your device. They are only used to draw this preview and the PNG.</p>
 </div>
 <script>
-const W=1200,H=675,S=2,OR='#e8792b';
-const R={thumb:{x:40,y:40,w:816,h:459},logo:{x:884,y:40,w:276,h:276},icon:{x:884,y:344,w:276,h:155}};
+const W=1200,H=675,S=2;
+const PRESETS={sunset:['#ff8a3d','#ff4d6d'],ember:['#e8792b','#e8792b'],electric:['#3da5ff','#7a5cff'],aurora:['#2de2b3','#3da5ff'],orchid:['#c77dff','#ff5fa2'],gold:['#f5c451','#e8923a']};
+const A=()=>[document.getElementById('ac1').value,document.getElementById('ac2').value];
+const rgba=(h,a)=>{const n=parseInt(h.slice(1),16);return `rgba(${n>>16},${(n>>8)&255},${n&255},${a})`;};
+function grad(x,y,w,h){const [c1,c2]=A();const g=ctx.createLinearGradient(x,y,x+w,y+h);g.addColorStop(0,c1);g.addColorStop(1,c2);return g;}
+const LAY={showcase:{thumb:{x:40,y:40,w:816,h:459},logo:{x:884,y:40,w:276,h:276},icon:{x:884,y:344,w:276,h:155}},
+  ba:{before:{x:40,y:40,w:546,h:459},after:{x:614,y:40,w:546,h:459}}};
+let layout='showcase',R=LAY.showcase;
 const cv=document.getElementById('stage'),ctx=cv.getContext('2d');
-let img={thumb:null,logo:null,icon:null,bg:null},hot=null;
+let img={thumb:null,logo:null,icon:null,bg:null,before:null,after:null},hot=null;
 const F='Inter,system-ui,sans-serif';
 const rp=(x,y,w,h,r)=>{ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();};
 const rr=(x,y,w,h,r)=>{ctx.beginPath();rp(x,y,w,h,r);};
@@ -94,11 +109,11 @@ function card(r,rad,key,preview,outline){
     const g=ctx.createLinearGradient(0,r.y,0,r.y+r.h);g.addColorStop(0,'#1c1c1c');g.addColorStop(1,'#141414');
     ctx.fillStyle=g;rr(r.x,r.y,r.w,r.h,rad);ctx.fill();ctx.restore();
   }
-  if(preview&&hot===key){ctx.save();ctx.fillStyle='rgba(232,121,43,.10)';rr(r.x,r.y,r.w,r.h,rad);ctx.fill();ctx.restore();}
+  if(preview&&hot===key){ctx.save();ctx.fillStyle=rgba(A()[0],.12);rr(r.x,r.y,r.w,r.h,rad);ctx.fill();ctx.restore();}
 }
 function stroke(r,rad,key,preview,outline){
   rr(r.x+.5,r.y+.5,r.w-1,r.h-1,rad);ctx.lineWidth=1;
-  ctx.strokeStyle=(preview&&hot===key)?OR:(outline?'rgba(255,255,255,.09)':'rgba(255,255,255,0)');ctx.stroke();
+  ctx.strokeStyle=(preview&&hot===key)?grad(r.x,r.y,r.w,r.h):(outline?'rgba(255,255,255,.09)':'rgba(255,255,255,0)');ctx.stroke();
 }
 function label(t,cx,y,size,sp,col){ctx.fillStyle=col;ctx.font=`500 ${size}px ${F}`;spaced(t,cx,y,sp,'center');}
 const HAS_FILTER=(()=>{try{return document.createElement('canvas').getContext('2d').filter==='none';}catch(e){return false;}})();
@@ -117,6 +132,29 @@ function drawBg(extra){
   }
   ctx.restore();
 }
+function pill(txt,x,y,fill,col){
+  ctx.font=`600 13px ${F}`;const w=tw(txt,3)+30;
+  ctx.fillStyle=fill==='ACC'?grad(x,y,w,30):fill;rr(x,y,w,30,15);ctx.fill();
+  ctx.fillStyle=col;spaced(txt,x+15,y+20,3,'left');
+}
+function drawBA(preview,outline){
+  [['before','BEFORE'],['after','AFTER']].forEach(([key,name])=>{
+    const r=R[key];card(r,22,key,preview,outline);
+    if(img[key]){
+      ctx.save();rr(r.x,r.y,r.w,r.h,22);ctx.clip();
+      if(key==='before'&&document.getElementById('mute').checked&&HAS_FILTER) ctx.filter='grayscale(1) brightness(.85)';
+      ctx.shadowColor='rgba(0,0,0,.5)';ctx.shadowBlur=18;ctx.shadowOffsetY=6;
+      contain(img[key],r.x+40,r.y+64,r.w-80,r.h-104);ctx.restore();
+    }else if(preview) label('DROP '+name+' LOGO',r.x+r.w/2,r.y+r.h/2,15,3.5,'#8a8a8a');
+    stroke(r,22,key,preview,outline);
+    if(key==='before') pill(name,r.x+22,r.y+22,'rgba(255,255,255,.12)','#d0d0d0');
+    else pill(name,r.x+22,r.y+22,'ACC','#161616');
+  });
+  const cx=W/2,cy=R.before.y+R.before.h/2;
+  ctx.save();ctx.shadowColor='rgba(0,0,0,.5)';ctx.shadowBlur=14;ctx.fillStyle=grad(cx-24,cy-24,48,48);ctx.beginPath();ctx.arc(cx,cy,24,0,Math.PI*2);ctx.fill();ctx.restore();
+  ctx.strokeStyle='#161616';ctx.lineWidth=3;ctx.lineCap='round';ctx.lineJoin='round';
+  ctx.beginPath();ctx.moveTo(cx-9,cy);ctx.lineTo(cx+9,cy);ctx.moveTo(cx+2,cy-8);ctx.lineTo(cx+10,cy);ctx.lineTo(cx+2,cy+8);ctx.stroke();
+}
 function draw(preview){
   ctx.setTransform(S,0,0,S,0,0);
   ctx.fillStyle=document.getElementById('bgcolor').value;ctx.fillRect(0,0,W,H);
@@ -124,6 +162,7 @@ function draw(preview){
   const vg=ctx.createRadialGradient(W/2,H*.4,60,W/2,H*.5,W*.75);vg.addColorStop(0,'rgba(255,255,255,.03)');vg.addColorStop(1,'rgba(0,0,0,.4)');
   ctx.fillStyle=vg;ctx.fillRect(0,0,W,H);
   const outline=document.getElementById('frames').checked;
+  if(layout==='ba'){drawBA(preview,outline);}else{
   /* thumbnail */
   let r=R.thumb;card(r,22,'thumb',preview,outline);
   if(img.thumb){ctx.save();rr(r.x,r.y,r.w,r.h,22);ctx.clip();cover(img.thumb,r.x,r.y,r.w,r.h);ctx.restore();}
@@ -133,7 +172,7 @@ function draw(preview){
   r=R.logo;card(r,22,'logo',preview,outline);
   if(img.logo){
     ctx.save();rr(r.x,r.y,r.w,r.h,22);ctx.clip();
-    const gl=ctx.createRadialGradient(r.x+r.w/2,r.y+r.h/2,10,r.x+r.w/2,r.y+r.h/2,r.w*.7);gl.addColorStop(0,'rgba(232,121,43,.10)');gl.addColorStop(1,'rgba(232,121,43,0)');
+    const gl=ctx.createRadialGradient(r.x+r.w/2,r.y+r.h/2,10,r.x+r.w/2,r.y+r.h/2,r.w*.7);gl.addColorStop(0,rgba(A()[0],.14));gl.addColorStop(1,rgba(A()[0],0));
     ctx.fillStyle=gl;ctx.fillRect(r.x,r.y,r.w,r.h);
     ctx.shadowColor='rgba(0,0,0,.5)';ctx.shadowBlur=18;ctx.shadowOffsetY=6;
     contain(img.logo,r.x+28,r.y+28,r.w-56,r.h-56);ctx.restore();
@@ -149,15 +188,26 @@ function draw(preview){
   ctx.fillStyle='#bdbdbd';ctx.font=`500 22px ${F}`;ctx.textAlign='left';ctx.fillText('128px',ix+128+18,iy+62);
   ctx.fillStyle='#8a8a8a';ctx.font=`500 11px ${F}`;spaced('ICON SIZE',ix+128+18,iy+86,3,'left');
   stroke(r,22,'icon',preview,outline);
+  }
   /* title + brand */
   const title=document.getElementById('title').value.toUpperCase(),brand=document.getElementById('brand').value.toUpperCase();
-  ctx.fillStyle=OR;ctx.fillRect(40,583,56,3);
+  ctx.fillStyle=grad(40,583,64,4);rr(40,582,64,4,2);ctx.fill();
   let fs=54;ctx.font=`600 ${fs}px ${F}`;
   while(fs>26&&tw(title,2)>690){fs-=2;ctx.font=`600 ${fs}px ${F}`;}
   ctx.fillStyle='#fff';spaced(title,118,584+fs*.36,2,'left');
   ctx.fillStyle='#8a8a8a';ctx.font=`500 14px ${F}`;spaced(brand,W-40,590,4,'right');
 }
 const redraw=()=>draw(true);
+function applyAccent(){const [c1,c2]=A();document.documentElement.style.setProperty('--orange',c1);document.documentElement.style.setProperty('--a2',c2);redraw();}
+document.getElementById('preset').addEventListener('change',e=>{const [c1,c2]=PRESETS[e.target.value];document.getElementById('ac1').value=c1;document.getElementById('ac2').value=c2;applyAccent();});
+['ac1','ac2'].forEach(id=>document.getElementById(id).addEventListener('input',applyAccent));
+function setLayout(v){
+  layout=v;R=LAY[v];hot=null;
+  document.querySelectorAll('[data-for]').forEach(e=>{e.hidden=e.dataset.for!==v;});
+  redraw();
+}
+document.getElementById('layout').addEventListener('change',e=>setLayout(e.target.value));
+document.getElementById('mute').addEventListener('input',()=>redraw());
 function load(key,file){
   if(!file||!file.type.startsWith('image/'))return;
   const im=new Image();im.onload=()=>{img[key]=im;redraw();};im.src=URL.createObjectURL(file);
@@ -178,12 +228,12 @@ document.getElementById('panelop').addEventListener('input',e=>{document.getElem
 document.getElementById('frost').addEventListener('input',e=>{document.getElementById('frv').textContent=e.target.value+'px';redraw();});
 document.getElementById('bgblur').addEventListener('input',e=>{document.getElementById('blv').textContent=e.target.value+'px';redraw();});
 document.getElementById('bgclear').addEventListener('click',()=>{img.bg=null;redraw();});
-document.getElementById('reset').addEventListener('click',()=>{img={thumb:null,logo:null,icon:null,bg:null};document.getElementById('bgcolor').value='#151515';document.getElementById('bgop').value=40;document.getElementById('panelop').value=0;document.getElementById('frost').value=18;document.getElementById('frv').textContent='18px';document.getElementById('pov').textContent='0%';document.getElementById('bgblur').value=0;document.getElementById('blv').textContent='0px';document.getElementById('opv').textContent='40%';document.getElementById('title').value='Game Title';document.getElementById('brand').value='Jelann Arts';redraw();});
+document.getElementById('reset').addEventListener('click',()=>{img={thumb:null,logo:null,icon:null,bg:null,before:null,after:null};document.getElementById('bgcolor').value='#151515';document.getElementById('preset').value='sunset';document.getElementById('ac1').value='#ff8a3d';document.getElementById('ac2').value='#ff4d6d';applyAccent();document.getElementById('bgop').value=40;document.getElementById('panelop').value=0;document.getElementById('frost').value=18;document.getElementById('frv').textContent='18px';document.getElementById('pov').textContent='0%';document.getElementById('bgblur').value=0;document.getElementById('blv').textContent='0px';document.getElementById('opv').textContent='40%';document.getElementById('title').value='Game Title';document.getElementById('brand').value='Jelann Arts';redraw();});
 document.getElementById('dl').addEventListener('click',()=>{
   draw(false);
   cv.toBlob(b=>{
     const a=document.createElement('a'),n=(document.getElementById('title').value||'post').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')||'post';
-    a.href=URL.createObjectURL(b);a.download=n+'-post.png';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000);
+    a.href=URL.createObjectURL(b);a.download=n+(layout==='ba'?'-before-after':'-post')+'.png';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000);
     redraw();
   },'image/png');
 });
